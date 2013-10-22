@@ -17,41 +17,38 @@ SEQ = 4
 
 # Make string of letter sequences for a given word. Assumes no spaces or odd chars in a word.
 def char_counter(word)
-  result = word[0...SEQ]
+  result = [word[0...SEQ]]
   limit = word.length-SEQ-1
-  limit.times {|n| result += ' '+word[n+1..n+SEQ]}
+  limit.times {|n| result << word[n+1..n+SEQ] }
   return result
 end
 
 # Compare a line of letter sequences to the dictinoary and list the words they fit.
-def word_counter(seqs,dict)
-  seqs = seqs.split
-  result = ''
-  dict.each do |word|
-    result += word.strip+' ' if seqs.map {|s| word.include?(s) }.all?
-  end
-  return result.strip
+def word_counter(seq,dict)
+  result = dict.select {|d| d if d.include?(seq) }
 end
 
 # ----------
-# words = open(URL) rescue nil  # Assuming file is not local.
-words = File.open('words.txt') rescue nil
+words = open(URL) rescue nil  # Pull file from URI, otherwise locally.
+words = File.open('words.txt') if words.nil?
 unless words.nil?
-  questions = File.new('questions.txt','w')
-  answers = File.new('answers.txt','w')
-  a_dict = []
+  (q_dict, a_dict, w_dict) = [],[],[]
 
   words.each_line do |line|
-    if line.length > SEQ  # ignore final character (endline) by using > instead of >=
-      # make shorter dictionary so 'answers' file generation runs faster.
-      questions.puts(char_counter(line))
-      a_dict << line
-    end
+    q_dict += char_counter(line) if line.length > SEQ # ignore newline by using > instead of >=
+    w_dict << line.strip # make an array of all words
   end
+  questions = File.new('questions.txt','w')
+  questions.puts q_dict.sort.uniq
+
   questions = File.open('questions.txt','r')
-  questions.each_line {|line| answers.puts(word_counter(line,a_dict)) }
-
-
+  questions.each_line do |line|
+    res = word_counter(line.strip,w_dict)
+    a_dict += res unless res.empty?
+    w_dict -= res # shrink dictionary as we use its words, for uniqueness
+  end
+  answers = File.new('answers.txt','w')
+  answers.puts a_dict.uniq
 else
   # No instructions specified for missing file.
   puts "No file found for URL #{URL}."
